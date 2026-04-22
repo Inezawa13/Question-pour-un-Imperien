@@ -1,581 +1,579 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QuizMaster - Panel Maître</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Master Panel — Imperium Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+<script src="/socket.io/socket.io.js"></script>
 <style>
   :root {
-    --bg: #080810;
-    --surface: #10101a;
-    --surface2: #18182a;
-    --surface3: #22223a;
-    --accent: #7c3aed;
-    --accent2: #a855f7;
-    --gold: #f59e0b;
-    --green: #10b981;
-    --red: #ef4444;
-    --blue: #3b82f6;
-    --text: #f8fafc;
-    --muted: #64748b;
-    --border: rgba(255,255,255,.06);
+    --gold: #d4a843;
+    --gold-light: #f0c96a;
+    --gold-dark: #8a6a1a;
+    --deep: #05030f;
+    --midnight: #0a0618;
+    --purple: #1a0a35;
+    --white: #f0eaff;
+    --silver: #c0c8d8;
+    --green: #27ae60;
+    --red: #c0392b;
+    --blue: #2980b9;
   }
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; }
-  h1,h2,h3,h4 { font-family:'Syne',sans-serif; }
-
-  /* AUTH */
-  #auth-screen {
-    min-height:100vh; display:flex; align-items:center; justify-content:center;
-    background: radial-gradient(ellipse at center, #1a0a2e 0%, #080810 70%);
+  body {
+    background: var(--deep);
+    color: var(--white);
+    font-family: 'Crimson Text', serif;
+    min-height: 100vh;
   }
-  .auth-card { background:var(--surface); border:1px solid rgba(124,58,237,.3); border-radius:24px; padding:2.5rem; width:100%; max-width:400px; text-align:center; }
-  .logo { font-size:2rem; font-weight:800; background:linear-gradient(135deg,var(--accent2),var(--gold)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin-bottom:1.5rem; }
-  .auth-card p { color:var(--muted); margin-bottom:1.5rem; }
-  input[type="password"], input[type="text"], input[type="number"], textarea, select {
-    width:100%; padding:.9rem 1.1rem; border-radius:10px;
-    background:var(--surface2); border:1.5px solid var(--border);
-    color:var(--text); font-size:1rem; font-family:'DM Sans',sans-serif;
-    outline:none; transition:border .2s; resize:vertical;
-  }
-  input:focus, textarea:focus, select:focus { border-color:var(--accent2); }
-  .btn { padding:.8rem 1.4rem; border-radius:10px; border:none; font-size:.95rem; font-weight:600; font-family:'Syne',sans-serif; cursor:pointer; transition:all .2s; }
-  .btn-primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); color:white; }
-  .btn-primary:hover { opacity:.9; transform:translateY(-1px); }
-  .btn-success { background:var(--green); color:white; }
-  .btn-danger { background:var(--red); color:white; }
-  .btn-gold { background:var(--gold); color:#000; }
-  .btn-blue { background:var(--blue); color:white; }
-  .btn-ghost { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
-  .btn:hover { opacity:.85; }
-  .btn-sm { padding:.5rem 1rem; font-size:.85rem; }
-  .btn-icon { padding:.5rem .7rem; }
 
-  /* MAIN LAYOUT */
-  #main-screen { display:none; }
-  .topbar {
-    background:var(--surface); border-bottom:1px solid var(--border);
-    padding:1rem 1.5rem; display:flex; align-items:center; justify-content:space-between;
-  }
-  .topbar .logo-sm { font-size:1.3rem; font-weight:800; background:linear-gradient(135deg,var(--accent2),var(--gold)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-  .status-pill { padding:.3rem .9rem; border-radius:100px; font-size:.8rem; font-weight:600; }
-  .status-waiting { background:rgba(100,116,139,.2); color:var(--muted); }
-  .status-live { background:rgba(239,68,68,.2); color:var(--red); animation:blink 1s infinite; }
-  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:.5;} }
+/* Starfield */
+#stars { position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden; }
+.star { position:absolute;border-radius:50%;background:white;animation:twinkle var(–d) ease-in-out infinite alternate; }
+@keyframes twinkle { from{opacity:0.05}to{opacity:0.7} }
 
-  .layout { display:grid; grid-template-columns:320px 1fr; gap:0; height:calc(100vh - 60px); }
+/* Layout */
+#master-app {
+position: relative;
+z-index: 10;
+max-width: 1100px;
+margin: 0 auto;
+padding: 24px 20px;
+display: grid;
+grid-template-columns: 1fr 340px;
+grid-template-rows: auto 1fr;
+gap: 16px;
+min-height: 100vh;
+}
 
-  /* SIDEBAR */
-  .sidebar { background:var(--surface); border-right:1px solid var(--border); overflow-y:auto; padding:1.2rem; display:flex; flex-direction:column; gap:1rem; }
-  .panel { background:var(--surface2); border-radius:14px; padding:1.2rem; border:1px solid var(--border); }
-  .panel h3 { font-size:.9rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:1rem; }
+/* Header */
+header {
+grid-column: 1 / -1;
+display: flex;
+align-items: center;
+justify-content: space-between;
+border-bottom: 1px solid rgba(212,168,67,0.2);
+padding-bottom: 16px;
+}
+.header-title {
+font-family: ‘Cinzel’, serif;
+font-size: 1.3rem;
+font-weight: 900;
+color: var(–gold-light);
+text-shadow: 0 0 20px rgba(212,168,67,0.4);
+}
+.header-status {
+font-family: ‘Cinzel’, serif;
+font-size: 0.7rem;
+letter-spacing: 0.2em;
+color: rgba(212,168,67,0.5);
+text-transform: uppercase;
+}
+.status-dot {
+display: inline-block;
+width: 8px; height: 8px;
+border-radius: 50%;
+background: var(–green);
+margin-right: 6px;
+animation: blink 1.5s ease infinite;
+}
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
 
-  .player-list { display:flex; flex-direction:column; gap:.5rem; }
-  .player-item { display:flex; justify-content:space-between; align-items:center; padding:.5rem .7rem; background:var(--surface3); border-radius:8px; font-size:.9rem; }
-  .player-score { font-family:'Syne',sans-serif; font-weight:700; color:var(--accent2); font-size:.9rem; }
+/* Panels */
+.panel {
+background: linear-gradient(145deg, rgba(26,10,53,0.95), rgba(10,6,24,0.98));
+border: 1px solid rgba(212,168,67,0.2);
+border-radius: 14px;
+padding: 24px;
+position: relative;
+}
+.panel-title {
+font-family: ‘Cinzel’, serif;
+font-size: 0.65rem;
+letter-spacing: 0.3em;
+color: rgba(212,168,67,0.5);
+text-transform: uppercase;
+margin-bottom: 16px;
+padding-bottom: 10px;
+border-bottom: 1px solid rgba(212,168,67,0.1);
+}
 
-  .answer-feed { display:flex; flex-direction:column; gap:.4rem; max-height:200px; overflow-y:auto; }
-  .answer-item { padding:.4rem .7rem; background:var(--surface3); border-radius:8px; font-size:.85rem; }
-  .answer-item .name { color:var(--accent2); font-weight:600; }
-  .answer-count { font-size:.85rem; color:var(--muted); }
+/* Main control area */
+#main-panel { grid-row: 2; }
 
-  /* MAIN CONTENT */
-  .main-content { overflow-y:auto; padding:1.5rem; display:flex; flex-direction:column; gap:1.5rem; }
+/* ── Buttons ── */
+.btn {
+font-family: ‘Cinzel’, serif;
+font-size: 0.8rem;
+font-weight: 700;
+letter-spacing: 0.12em;
+text-transform: uppercase;
+padding: 13px 24px;
+border: none;
+border-radius: 8px;
+cursor: pointer;
+transition: all 0.25s;
+}
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn:active:not(:disabled) { transform: scale(0.97); }
 
-  /* CONTROL BAR */
-  .control-bar { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1.2rem 1.5rem; display:flex; align-items:center; gap:1rem; flex-wrap:wrap; }
-  .control-bar .phase-label { font-size:.85rem; color:var(--muted); flex:1; }
+.btn-gold {
+background: linear-gradient(135deg, var(–gold-dark), var(–gold));
+color: var(–deep);
+box-shadow: 0 4px 16px rgba(212,168,67,0.3);
+}
+.btn-gold:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(212,168,67,0.5); transform: translateY(-1px); }
 
-  /* QUESTION EDITOR */
-  .questions-section {}
-  .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; }
-  .section-header h2 { font-size:1.2rem; }
+.btn-green {
+background: linear-gradient(135deg, #1a5c36, #27ae60);
+color: white;
+box-shadow: 0 4px 16px rgba(39,174,96,0.2);
+}
+.btn-green:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(39,174,96,0.4); transform: translateY(-1px); }
 
-  .question-list { display:flex; flex-direction:column; gap:.75rem; }
-  .q-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:1rem 1.2rem; }
-  .q-card-header { display:flex; align-items:center; gap:.75rem; margin-bottom:.5rem; }
-  .q-num { font-family:'Syne',sans-serif; font-weight:800; color:var(--accent2); }
-  .q-type-badge { padding:.2rem .6rem; border-radius:100px; font-size:.75rem; font-weight:600; background:rgba(124,58,237,.2); color:var(--accent2); }
-  .q-preview { color:var(--muted); font-size:.9rem; }
-  .q-card-actions { display:flex; gap:.5rem; margin-top:.75rem; }
+.btn-blue {
+background: linear-gradient(135deg, #1a3a5c, #2980b9);
+color: white;
+}
+.btn-blue:hover:not(:disabled) { filter: brightness(1.2); transform: translateY(-1px); }
 
-  /* ADD QUESTION MODAL */
-  .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.7); display:none; align-items:center; justify-content:center; z-index:100; padding:1rem; }
-  .modal-overlay.open { display:flex; }
-  .modal { background:var(--surface); border:1px solid rgba(124,58,237,.3); border-radius:20px; padding:1.5rem; width:100%; max-width:560px; max-height:90vh; overflow-y:auto; }
-  .modal h3 { font-size:1.2rem; margin-bottom:1.2rem; }
-  .form-group { margin-bottom:1rem; }
-  .form-group label { display:block; font-size:.85rem; color:var(--muted); margin-bottom:.4rem; }
-  .choices-editor { display:flex; flex-direction:column; gap:.5rem; }
-  .choice-row { display:flex; gap:.5rem; align-items:center; }
-  .correct-dot { width:12px; height:12px; border-radius:50%; background:var(--surface3); border:2px solid var(--muted); cursor:pointer; flex-shrink:0; transition:all .2s; }
-  .correct-dot.active { background:var(--green); border-color:var(--green); }
-  .modal-actions { display:flex; gap:.75rem; margin-top:1.2rem; }
+.btn-full { width: 100%; margin-bottom: 10px; }
 
-  /* INTRO SECTION */
-  .intro-section { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:1.2rem 1.5rem; }
-  .intro-section h2 { font-size:1.1rem; margin-bottom:1rem; }
-  .intro-url { display:flex; gap:.75rem; }
+/* ── Question display ── */
+#question-display {
+background: rgba(255,255,255,0.03);
+border: 1px solid rgba(212,168,67,0.15);
+border-radius: 10px;
+padding: 20px;
+margin-bottom: 20px;
+min-height: 80px;
+}
+.q-meta {
+font-family: ‘Cinzel’, serif;
+font-size: 0.65rem;
+letter-spacing: 0.25em;
+color: rgba(212,168,67,0.5);
+text-transform: uppercase;
+margin-bottom: 8px;
+}
+.q-text-master {
+font-size: 1.15rem;
+color: var(–white);
+line-height: 1.4;
+}
+.q-correct {
+margin-top: 12px;
+font-family: ‘Cinzel’, serif;
+font-size: 0.75rem;
+color: var(–green);
+letter-spacing: 0.1em;
+}
 
-  .empty-state { text-align:center; padding:2rem; color:var(--muted); }
-  .empty-state .icon { font-size:2.5rem; margin-bottom:.75rem; }
+/* ── Choices master view ── */
+.choices-master {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 8px;
+margin-bottom: 20px;
+}
+.choice-master {
+padding: 10px 14px;
+border-radius: 8px;
+border: 1px solid rgba(212,168,67,0.15);
+background: rgba(255,255,255,0.03);
+font-size: 0.95rem;
+display: flex;
+gap: 10px;
+align-items: center;
+}
+.choice-master.is-correct {
+border-color: var(–green);
+background: rgba(39,174,96,0.12);
+}
+.choice-ltr {
+font-family: ‘Cinzel’, serif;
+font-size: 0.7rem;
+font-weight: 700;
+color: var(–gold);
+width: 22px;
+text-align: center;
+flex-shrink: 0;
+}
 
-  /* CURRENT Q DISPLAY */
-  .current-q-display { background:linear-gradient(135deg, rgba(124,58,237,.1), rgba(168,85,247,.05)); border:1px solid rgba(124,58,237,.3); border-radius:16px; padding:1.5rem; }
-  .current-q-display h4 { font-size:.85rem; color:var(--accent2); text-transform:uppercase; letter-spacing:.08em; margin-bottom:.75rem; }
-  .current-q-text { font-size:1.1rem; font-weight:600; margin-bottom:.75rem; }
-  .current-q-answer { color:var(--green); font-size:.9rem; }
+/* ── Timer display ── */
+#master-timer {
+font-family: ‘Cinzel’, serif;
+font-size: 3rem;
+font-weight: 900;
+text-align: center;
+color: var(–gold-light);
+text-shadow: 0 0 30px rgba(212,168,67,0.5);
+margin-bottom: 8px;
+}
+#master-timer-bar-bg {
+width: 100%;
+height: 6px;
+background: rgba(255,255,255,0.06);
+border-radius: 3px;
+overflow: hidden;
+margin-bottom: 20px;
+}
+#master-timer-bar {
+height: 100%;
+background: linear-gradient(to right, var(–gold-dark), var(–gold-light));
+border-radius: 3px;
+transition: width 0.9s linear, background 0.5s;
+width: 100%;
+}
+#master-timer-bar.urgent { background: linear-gradient(to right, #c0392b, #e74c3c); }
 
-  ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--surface3); border-radius:4px; }
+/* ── Answers live ── */
+#answers-progress {
+font-family: ‘Cinzel’, serif;
+font-size: 0.85rem;
+color: rgba(212,168,67,0.7);
+text-align: center;
+margin-bottom: 12px;
+}
+#answers-list {
+display: flex;
+flex-wrap: wrap;
+gap: 6px;
+min-height: 40px;
+margin-bottom: 16px;
+}
+.answer-chip {
+background: rgba(212,168,67,0.1);
+border: 1px solid rgba(212,168,67,0.25);
+border-radius: 16px;
+padding: 4px 12px;
+font-size: 0.8rem;
+color: var(–gold-light);
+animation: chipIn 0.3s ease;
+}
+@keyframes chipIn {
+from { transform: scale(0); opacity: 0; }
+to   { transform: scale(1); opacity: 1; }
+}
+
+/* ── Players panel ── */
+#right-panel { grid-row: 2; }
+#players-list {
+max-height: calc(100vh - 220px);
+overflow-y: auto;
+}
+.player-row {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 8px 12px;
+border-radius: 6px;
+margin-bottom: 6px;
+background: rgba(255,255,255,0.03);
+border: 1px solid rgba(212,168,67,0.08);
+animation: slideIn 0.3s ease;
+font-size: 0.95rem;
+}
+@keyframes slideIn { from{opacity:0;transform:translateX(10px)}to{opacity:1;transform:translateX(0)} }
+.player-row-name { color: var(–white); }
+.player-row-score { color: var(–gold); font-family: ‘Cinzel’, serif; font-size: 0.8rem; }
+
+/* ── Scoreboard in panel ── */
+.score-row-m {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 9px 12px;
+border-radius: 6px;
+margin-bottom: 6px;
+background: rgba(255,255,255,0.03);
+border: 1px solid rgba(212,168,67,0.08);
+}
+.score-row-m:nth-child(1) { background: rgba(212,168,67,0.1); border-color: rgba(212,168,67,0.35); }
+.score-row-m:nth-child(2) { background: rgba(192,192,192,0.06); border-color: rgba(192,192,192,0.2); }
+.score-row-m:nth-child(3) { background: rgba(205,127,50,0.06); border-color: rgba(205,127,50,0.2); }
+.srm-rank { font-family:‘Cinzel’,serif;font-size:0.75rem;color:var(–gold);width:20px;text-align:center;flex-shrink:0; }
+.srm-name { flex:1;font-size:0.9rem;color:var(–white);overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
+.srm-score { font-family:‘Cinzel’,serif;font-size:0.8rem;color:var(–gold-light);font-weight:700;white-space:nowrap; }
+
+/* ── State messages ── */
+.state-msg {
+text-align: center;
+padding: 30px;
+color: rgba(212,168,67,0.5);
+font-style: italic;
+}
+
+/* Divider */
+.divider { width:100%;height:1px;background:linear-gradient(to right,transparent,rgba(212,168,67,0.3),transparent);margin:18px 0; }
 </style>
+
 </head>
 <body>
+<div id="stars"></div>
 
-<!-- AUTH -->
-<div id="auth-screen">
-  <div class="auth-card">
-    <div class="logo">⚔️ Question pour un Impérien</div>
-    <p>Panel Maître — Accès sécurisé</p>
-    <div style="display:flex;flex-direction:column;gap:.75rem;">
-      <input type="password" id="pwd-input" placeholder="Mot de passe maître..." onkeydown="if(event.key==='Enter')auth()">
-      <button class="btn btn-primary" onclick="auth()">Accéder au panel</button>
-      <p id="auth-error" style="color:var(--red);font-size:.85rem;display:none;">Mot de passe incorrect</p>
+<div id="master-app">
+  <header>
+    <div>
+      <div class="header-title">⚔️ Master Panel — Imperium Quiz</div>
+      <div class="header-status"><span class="status-dot"></span>Connecté en tant que maître de cérémonie</div>
     </div>
-  </div>
+    <div id="header-phase" style="font-family:'Cinzel',serif;font-size:0.75rem;color:rgba(212,168,67,0.6);text-transform:uppercase;letter-spacing:0.2em;">
+      Lobby
+    </div>
+  </header>
+
+  <!-- Main Panel -->
+
+  <div class="panel" id="main-panel">
+
+```
+<!-- LOBBY STATE -->
+<div id="state-lobby">
+  <div class="panel-title">Contrôle du quiz</div>
+  <div class="state-msg" id="lobby-wait-msg">En attente des joueurs…</div>
+  <div id="master-player-count" style="font-family:'Cinzel',serif;font-size:1.1rem;color:var(--gold);text-align:center;margin-bottom:20px;"></div>
+  <button class="btn btn-gold btn-full" id="btn-start" disabled>Lancer la partie</button>
 </div>
 
-<!-- MAIN -->
-<div id="main-screen">
-  <div class="topbar">
-    <span class="logo-sm">⚔️ Question pour un Impérien — Panel Maître</span>
-    <div style="display:flex;align-items:center;gap:1rem;">
-      <span id="phase-pill" class="status-pill status-waiting">EN ATTENTE</span>
-      <button class="btn btn-ghost btn-sm" onclick="resetGame()">🔄 Reset</button>
-    </div>
+<!-- QUESTION STATE -->
+<div id="state-question" style="display:none">
+  <div class="panel-title">Question en cours</div>
+  <div id="master-timer">30</div>
+  <div id="master-timer-bar-bg"><div id="master-timer-bar"></div></div>
+
+  <div id="question-display">
+    <div class="q-meta" id="master-q-meta">Manche 1 · Q1/10</div>
+    <div class="q-text-master" id="master-q-text">—</div>
+    <div class="q-correct" id="master-q-correct">—</div>
   </div>
 
-  <div class="layout">
-    <!-- SIDEBAR -->
-    <div class="sidebar">
-      <div class="panel">
-        <h3>👥 Joueurs (<span id="player-count">0</span>)</h3>
-        <div class="player-list" id="player-list">
-          <p style="color:var(--muted);font-size:.85rem;">En attente de joueurs...</p>
-        </div>
-      </div>
+  <div class="choices-master" id="master-choices"></div>
 
-      <div class="panel">
-        <h3>💬 Réponses (<span id="answer-count">0</span>/<span id="answer-total">0</span>)</h3>
-        <div class="answer-feed" id="answer-feed"></div>
-      </div>
+  <div id="answers-progress">0 / 0 réponses reçues</div>
+  <div id="answers-list"></div>
 
-      <div class="panel" id="current-q-panel" style="display:none;">
-        <h3>❓ Question en cours</h3>
-        <div id="current-q-display"></div>
-      </div>
-    </div>
-
-    <!-- MAIN -->
-    <div class="main-content">
-
-      <!-- CONTROLS -->
-      <div class="control-bar">
-        <span class="phase-label" id="phase-label">En attente de joueurs</span>
-        <button class="btn btn-primary" id="btn-intro" onclick="startIntro()" style="display:none;">▶️ Lancer l'intro</button>
-        <button class="btn btn-success" id="btn-start" onclick="startGame()">🚀 Démarrer le quiz</button>
-        <button class="btn btn-gold" id="btn-next" onclick="nextQuestion()" style="display:none;">⏭ Question suivante</button>
-        <button class="btn btn-blue" id="btn-lb" onclick="showLeaderboard()" style="display:none;">🏆 Classement</button>
-      </div>
-
-      <!-- INTRO VIDEO -->
-      <div class="intro-section">
-        <h2>🎬 Vidéo d'intro</h2>
-        <div class="intro-url">
-          <input type="text" id="intro-url-input" placeholder="URL YouTube ou vidéo directe...">
-          <button class="btn btn-ghost" onclick="saveIntro()">Sauvegarder</button>
-        </div>
-        <p id="intro-status" style="font-size:.8rem;color:var(--muted);margin-top:.5rem;"></p>
-      </div>
-
-      <!-- QUESTIONS -->
-      <div class="questions-section">
-        <div class="section-header">
-          <h2>❓ Questions (<span id="q-count">0</span>)</h2>
-          <button class="btn btn-primary" onclick="openAddModal()">+ Ajouter</button>
-        </div>
-        <div class="question-list" id="question-list">
-          <div class="empty-state"><div class="icon">📝</div><p>Aucune question. Commence par en ajouter !</p></div>
-        </div>
-      </div>
-
-    </div>
-  </div>
+  <button class="btn btn-blue btn-full" id="btn-force-reveal" disabled>⏩ Révéler la réponse maintenant</button>
 </div>
 
-<!-- ADD QUESTION MODAL -->
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <h3 id="modal-title">Ajouter une question</h3>
+<!-- REVEAL STATE -->
+<div id="state-reveal" style="display:none">
+  <div class="panel-title">Résultats de la question</div>
+  <div id="master-scoreboard-reveal" style="margin-bottom:20px;"></div>
+  <button class="btn btn-green btn-full" id="btn-next-q">▶ Question suivante</button>
+</div>
 
-    <div class="form-group">
-      <label>Type de question</label>
-      <select id="q-type-select" onchange="updateTypeUI()">
-        <option value="qcm">QCM (choix multiples)</option>
-        <option value="vrai_faux">Vrai / Faux</option>
-        <option value="texte">Réponse libre</option>
-        <option value="trou">Texte à trou (___)</option>
-      </select>
-    </div>
+<!-- INTERMISSION STATE -->
+<div id="state-intermission" style="display:none">
+  <div class="panel-title">Fin de manche</div>
+  <div id="master-intermission-sb" style="margin-bottom:20px;"></div>
+  <button class="btn btn-gold btn-full" id="btn-next-round">🌟 Lancer la manche suivante</button>
+</div>
 
-    <div class="form-group">
-      <label>Question <span id="trou-hint" style="color:var(--muted);display:none;">(utilise ___ pour le trou)</span></label>
-      <textarea id="q-question" rows="2" placeholder="Ta question ici..."></textarea>
-    </div>
+<!-- FINAL STATE -->
+<div id="state-final" style="display:none">
+  <div class="panel-title">🏆 Résultats finaux</div>
+  <div id="master-final-sb"></div>
+  <div class="divider"></div>
+  <div style="text-align:center;color:rgba(212,168,67,0.5);font-style:italic;">Fin de la partie. Bravo à tous les Impériens !</div>
+</div>
+```
 
-    <div id="qcm-choices" class="form-group">
-      <label>Choix (clique le ● vert pour marquer la bonne réponse)</label>
-      <div class="choices-editor" id="choices-editor"></div>
-      <button class="btn btn-ghost btn-sm" style="margin-top:.5rem;" onclick="addChoice()">+ Choix</button>
-    </div>
-
-    <div id="correct-answer-zone" class="form-group" style="display:none;">
-      <label>Bonne réponse</label>
-      <input type="text" id="correct-answer-input" placeholder="Réponse exacte...">
-    </div>
-
-    <div class="form-group">
-      <label>Points</label>
-      <input type="number" id="q-points" value="100" min="10" step="10">
-    </div>
-
-    <div class="modal-actions">
-      <button class="btn btn-primary" onclick="saveQuestion()">💾 Sauvegarder</button>
-      <button class="btn btn-ghost" onclick="closeModal()">Annuler</button>
-    </div>
   </div>
+
+  <!-- Right: Players -->
+
+  <div class="panel" id="right-panel">
+    <div class="panel-title">Joueurs connectés · <span id="rp-count">0</span></div>
+    <div id="players-list"></div>
+  </div>
+
 </div>
 
 <script>
-let ws, questions = [], players = {}, scores = {}, editingIndex = null;
-let choiceCorrectIndex = 0;
-
-// --- AUTH ---
-function auth() {
-  const pwd = document.getElementById('pwd-input').value;
-  connect(pwd);
+// Stars
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 100; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = Math.random() * 2 + 0.5;
+  s.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;width:${size}px;height:${size}px;--d:${Math.random()*4+2}s;animation-delay:${Math.random()*5}s;`;
+  starsEl.appendChild(s);
 }
 
-function connect(pwd) {
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  ws = new WebSocket(`${protocol}//${location.host}`);
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'master_auth', password: pwd }));
-  ws.onmessage = (e) => handleMessage(JSON.parse(e.data));
-  ws.onclose = () => setTimeout(() => connect(document.getElementById('pwd-input').value || ''), 3000);
+const socket = io();
+let currentQuestion = null;
+let currentTimerLimit = 30;
+let playerScores = {};
+
+// ── Show state ────────────────────────────────────────────────────────────────
+function showState(id) {
+  ['lobby','question','reveal','intermission','final'].forEach(s => {
+    document.getElementById(`state-${s}`).style.display = 'none';
+  });
+  document.getElementById(`state-${id}`).style.display = 'block';
+  const labels = {lobby:'Lobby',question:'Question',reveal:'Révélation',intermission:'Intermission',final:'Fin'};
+  document.getElementById('header-phase').textContent = labels[id] || id;
 }
 
-function handleMessage(data) {
-  switch (data.type) {
-    case 'master_auth_ok':
-      document.getElementById('auth-screen').style.display = 'none';
-      document.getElementById('main-screen').style.display = 'block';
-      break;
-    case 'master_auth_fail':
-      document.getElementById('auth-error').style.display = 'block';
-      break;
-    case 'state_update':
-      if (data.state.questions) { questions = data.state.questions; renderQuestions(); }
-      if (data.leaderboard) updateLeaderboard(data.leaderboard);
-      break;
-    case 'players_update':
-      players = {};
-      data.players.forEach(p => players[p.id] = p);
-      if (data.leaderboard) data.leaderboard.forEach(p => scores[p.id] = p.score);
-      renderPlayers();
-      break;
-    case 'player_joined':
-      players[data.id] = { id: data.id, name: data.name };
-      scores[data.id] = 0;
-      renderPlayers();
-      break;
-    case 'player_left':
-      delete players[data.id];
-      renderPlayers();
-      break;
-    case 'answer_update':
-      addAnswerFeed(data.playerName, data.answer);
-      document.getElementById('answer-count').textContent = data.count;
-      document.getElementById('answer-total').textContent = data.total;
-      break;
-    case 'questions_saved':
-      showToast(`✅ ${data.count} question(s) sauvegardée(s)`);
-      break;
-    case 'intro_saved':
-      document.getElementById('intro-status').textContent = '✅ URL sauvegardée';
-      document.getElementById('btn-intro').style.display = '';
-      break;
-    case 'phase_change':
-      updatePhaseUI(data.phase);
-      if (data.leaderboard) updateLeaderboard(data.leaderboard);
-      if (data.question) showCurrentQuestion(data.question, data.index, data.total);
-      break;
-  }
+function renderScoreboard(data, containerId, rowClass='score-row-m') {
+  const medals = ['🥇','🥈','🥉'];
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  data.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = rowClass;
+    row.innerHTML = `
+      <div class="srm-rank">${medals[i] || (i+1)}</div>
+      <div class="srm-name">${p.name}</div>
+      <div class="srm-score">${p.score} pts</div>
+    `;
+    el.appendChild(row);
+  });
 }
 
-// --- CONTROLS ---
-function startIntro() { ws.send(JSON.stringify({ type: 'master_start_intro' })); }
-function startGame() { ws.send(JSON.stringify({ type: 'master_start_game' })); }
-function nextQuestion() { ws.send(JSON.stringify({ type: 'master_next_question' })); }
-function showLeaderboard() { ws.send(JSON.stringify({ type: 'master_show_leaderboard' })); }
-function resetGame() { if (confirm('Réinitialiser la partie ?')) ws.send(JSON.stringify({ type: 'master_reset' })); }
+// ── Players list ──────────────────────────────────────────────────────────────
+socket.on('lobby_update', ({ players }) => {
+  const list = document.getElementById('players-list');
+  const count = document.getElementById('rp-count');
+  count.textContent = players.length;
+  list.innerHTML = '';
+  players.forEach(n => {
+    const row = document.createElement('div');
+    row.className = 'player-row';
+    row.innerHTML = `<span class="player-row-name">⚔️ ${n}</span><span class="player-row-score">${playerScores[n] ?? 0} pts</span>`;
+    list.appendChild(row);
+  });
 
-function saveIntro() {
-  const url = document.getElementById('intro-url-input').value.trim();
-  if (!url) return;
-  ws.send(JSON.stringify({ type: 'master_set_intro', url }));
+  // Enable start if players > 0
+  document.getElementById('btn-start').disabled = players.length === 0;
+  document.getElementById('master-player-count').textContent =
+    players.length > 0 ? `${players.length} guerrier${players.length>1?'s':''} prêt${players.length>1?'s':''}` : '';
+});
+
+// ── Start game ────────────────────────────────────────────────────────────────
+document.getElementById('btn-start').addEventListener('click', () => {
+  socket.emit('master_start_game');
+});
+
+// ── Question ──────────────────────────────────────────────────────────────────
+socket.on('question', ({ round, questionIndex, total, question, choices, timeLimit, answer }) => {
+  currentQuestion = { round, questionIndex, total, question, choices, answer, timeLimit };
+  currentTimerLimit = timeLimit;
+
+  document.getElementById('master-q-meta').textContent = `Manche ${round} · Q${questionIndex+1}/${total}`;
+  document.getElementById('master-q-text').textContent = question;
+
+  // Answer revealed for master
+  const letters = ['A','B','C','D'];
+  document.getElementById('master-q-correct').textContent = ''; // revealed on answer_reveal
+
+  // Choices
+  const grid = document.getElementById('master-choices');
+  grid.innerHTML = '';
+  choices.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = 'choice-master';
+    div.id = `master-choice-${i}`;
+    div.innerHTML = `<div class="choice-ltr">${letters[i]}</div><span>${c}</span>`;
+    grid.appendChild(div);
+  });
+
+  // Reset answers
+  document.getElementById('answers-list').innerHTML = '';
+  document.getElementById('answers-progress').textContent = '0 / ? réponses reçues';
+  document.getElementById('btn-force-reveal').disabled = false;
+
+  updateMasterTimer(timeLimit);
+  showState('question');
+});
+
+socket.on('timer', ({ timeLeft }) => {
+  updateMasterTimer(timeLeft);
+});
+
+function updateMasterTimer(t) {
+  document.getElementById('master-timer').textContent = t;
+  const bar = document.getElementById('master-timer-bar');
+  bar.style.width = `${(t / currentTimerLimit) * 100}%`;
+  if (t <= 10) bar.classList.add('urgent');
+  else bar.classList.remove('urgent');
 }
 
-function saveQuestions() {
-  ws.send(JSON.stringify({ type: 'master_set_questions', questions }));
-}
+// ── Player answered ───────────────────────────────────────────────────────────
+socket.on('player_answered', ({ name, count, total }) => {
+  document.getElementById('answers-progress').textContent = `${count} / ${total} réponses reçues`;
+  const chip = document.createElement('div');
+  chip.className = 'answer-chip';
+  chip.textContent = `✓ ${name}`;
+  document.getElementById('answers-list').appendChild(chip);
+});
 
-function updatePhaseUI(phase) {
-  const pill = document.getElementById('phase-pill');
-  const label = document.getElementById('phase-label');
-  const btnStart = document.getElementById('btn-start');
-  const btnNext = document.getElementById('btn-next');
-  const btnLb = document.getElementById('btn-lb');
+// ── Force reveal ──────────────────────────────────────────────────────────────
+document.getElementById('btn-force-reveal').addEventListener('click', () => {
+  // Simulate timer end by emitting (server will reveal on next_question logic, 
+  // but we handle via next_question immediately)
+  socket.emit('master_next_question');
+  document.getElementById('btn-force-reveal').disabled = true;
+});
 
-  pill.className = 'status-pill';
-  if (phase === 'waiting') {
-    pill.textContent = 'EN ATTENTE'; pill.classList.add('status-waiting');
-    label.textContent = 'En attente de joueurs';
-    btnStart.style.display = ''; btnNext.style.display = 'none'; btnLb.style.display = 'none';
-  } else if (phase === 'intro') {
-    pill.textContent = '🎬 INTRO'; pill.classList.add('status-live');
-    label.textContent = 'Vidéo d\'intro en cours';
-    btnStart.style.display = ''; btnNext.style.display = 'none'; btnLb.style.display = 'none';
-  } else if (phase === 'question') {
-    pill.textContent = '🔴 EN JEU'; pill.classList.add('status-live');
-    label.textContent = 'Question en cours';
-    btnStart.style.display = 'none'; btnNext.style.display = ''; btnLb.style.display = '';
-    document.getElementById('answer-count').textContent = '0';
-    document.getElementById('answer-feed').innerHTML = '';
-    document.getElementById('current-q-panel').style.display = '';
-  } else if (phase === 'leaderboard' || phase === 'end') {
-    pill.textContent = phase === 'end' ? '🏁 TERMINÉ' : '🏆 CLASSEMENT';
-    pill.classList.add(phase === 'end' ? 'status-waiting' : 'status-live');
-    label.textContent = phase === 'end' ? 'Partie terminée' : 'Affichage du classement';
-    btnNext.style.display = phase === 'end' ? 'none' : '';
-    btnLb.style.display = '';
-    btnStart.style.display = 'none';
-  }
-}
+// ── Answer reveal ─────────────────────────────────────────────────────────────
+socket.on('answer_reveal', ({ correctAnswer, results, scoreboard }) => {
+  // Highlight correct answer for master
+  const letters = ['A','B','C','D'];
+  document.querySelectorAll('[id^="master-choice-"]').forEach((el, i) => {
+    if (i === correctAnswer) el.classList.add('is-correct');
+  });
+  document.getElementById('master-q-correct').textContent =
+    `✅ Bonne réponse : ${letters[correctAnswer]}`;
 
-function showCurrentQuestion(q, index, total) {
-  const types = { qcm: 'QCM', vrai_faux: 'Vrai/Faux', texte: 'Libre', trou: 'Trou' };
-  document.getElementById('current-q-display').innerHTML = `
-    <div style="font-size:.8rem;color:var(--muted);margin-bottom:.4rem;">Q${index+1}/${total} — ${types[q.type]}</div>
-    <div style="font-weight:600;margin-bottom:.5rem;">${q.question}</div>
-    <div style="color:var(--green);font-size:.85rem;">✓ ${q.correctAnswer}</div>
-    ${q.type === 'qcm' ? `<div style="margin-top:.5rem;font-size:.8rem;color:var(--muted);">${q.choices.join(' · ')}</div>` : ''}
-  `;
-}
+  // Update scores
+  scoreboard.forEach(p => { playerScores[p.name] = p.score; });
 
-// --- PLAYERS ---
-function renderPlayers() {
-  const count = Object.keys(players).length;
-  document.getElementById('player-count').textContent = count;
-  document.getElementById('answer-total').textContent = count;
-  const list = document.getElementById('player-list');
-  if (count === 0) { list.innerHTML = '<p style="color:var(--muted);font-size:.85rem;">En attente de joueurs...</p>'; return; }
-  list.innerHTML = Object.values(players).map(p =>
-    `<div class="player-item"><span>${p.name}</span><span class="player-score">${scores[p.id] || 0} pts</span></div>`
-  ).join('');
-}
+  renderScoreboard(scoreboard, 'master-scoreboard-reveal');
+  document.getElementById('btn-force-reveal').disabled = true;
 
-function updateLeaderboard(lb) {
-  lb.forEach(p => { scores[p.id] = p.score; });
-  renderPlayers();
-}
+  setTimeout(() => {
+    showState('reveal');
+  }, 800);
+});
 
-function addAnswerFeed(name, answer) {
-  const feed = document.getElementById('answer-feed');
-  const item = document.createElement('div');
-  item.className = 'answer-item';
-  item.innerHTML = `<span class="name">${name}</span> : ${answer}`;
-  feed.prepend(item);
-}
+// ── Next question ─────────────────────────────────────────────────────────────
+document.getElementById('btn-next-q').addEventListener('click', () => {
+  socket.emit('master_next_question');
+  showState('question'); // will be overridden by question event or round_end
+});
 
-// --- QUESTIONS ---
-function renderQuestions() {
-  const count = questions.length;
-  document.getElementById('q-count').textContent = count;
-  const list = document.getElementById('question-list');
-  if (count === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="icon">📝</div><p>Aucune question. Commence par en ajouter !</p></div>';
-    return;
-  }
-  const types = { qcm: 'QCM', vrai_faux: 'Vrai/Faux', texte: 'Libre', trou: 'Trou' };
-  list.innerHTML = questions.map((q, i) => `
-    <div class="q-card">
-      <div class="q-card-header">
-        <span class="q-num">#${i+1}</span>
-        <span class="q-type-badge">${types[q.type]}</span>
-        <span style="color:var(--gold);font-size:.8rem;">${q.points} pts</span>
-      </div>
-      <div class="q-preview">${q.question}</div>
-      <div style="font-size:.8rem;color:var(--green);margin-top:.3rem;">✓ ${q.correctAnswer}</div>
-      <div class="q-card-actions">
-        <button class="btn btn-ghost btn-sm btn-icon" onclick="editQuestion(${i})">✏️</button>
-        <button class="btn btn-ghost btn-sm btn-icon" onclick="deleteQuestion(${i})">🗑️</button>
-        ${i > 0 ? `<button class="btn btn-ghost btn-sm btn-icon" onclick="moveQuestion(${i},-1)">⬆️</button>` : ''}
-        ${i < questions.length-1 ? `<button class="btn btn-ghost btn-sm btn-icon" onclick="moveQuestion(${i},1)">⬇️</button>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
+// ── Round end ─────────────────────────────────────────────────────────────────
+socket.on('round_end', ({ round, scoreboard }) => {
+  scoreboard.forEach(p => { playerScores[p.name] = p.score; });
+  renderScoreboard(scoreboard, 'master-intermission-sb');
+  showState('intermission');
+});
 
-function deleteQuestion(i) {
-  if (confirm('Supprimer cette question ?')) {
-    questions.splice(i, 1);
-    renderQuestions();
-    saveQuestions();
-  }
-}
+// ── Next round ────────────────────────────────────────────────────────────────
+document.getElementById('btn-next-round').addEventListener('click', () => {
+  socket.emit('master_next_round');
+});
 
-function moveQuestion(i, dir) {
-  const j = i + dir;
-  [questions[i], questions[j]] = [questions[j], questions[i]];
-  renderQuestions();
-  saveQuestions();
-}
+socket.on('round_start', ({ round }) => {
+  showState('question');
+});
 
-function editQuestion(i) {
-  editingIndex = i;
-  const q = questions[i];
-  document.getElementById('modal-title').textContent = 'Modifier la question';
-  document.getElementById('q-type-select').value = q.type;
-  document.getElementById('q-question').value = q.question;
-  document.getElementById('q-points').value = q.points || 100;
-  updateTypeUI();
-  if (q.type === 'qcm') {
-    const editor = document.getElementById('choices-editor');
-    editor.innerHTML = '';
-    q.choices.forEach((c, ci) => {
-      addChoiceRow(c, c === q.correctAnswer);
-    });
-  } else {
-    document.getElementById('correct-answer-input').value = q.correctAnswer || '';
-  }
-  document.getElementById('modal').classList.add('open');
-}
+// ── Game over ─────────────────────────────────────────────────────────────────
+socket.on('game_over', ({ scoreboard }) => {
+  scoreboard.forEach(p => { playerScores[p.name] = p.score; });
+  renderScoreboard(scoreboard, 'master-final-sb');
+  showState('final');
+});
 
-// --- MODAL ---
-function openAddModal() {
-  editingIndex = null;
-  document.getElementById('modal-title').textContent = 'Ajouter une question';
-  document.getElementById('q-type-select').value = 'qcm';
-  document.getElementById('q-question').value = '';
-  document.getElementById('q-points').value = '100';
-  document.getElementById('correct-answer-input').value = '';
-  document.getElementById('choices-editor').innerHTML = '';
-  updateTypeUI();
-  addChoiceRow('', false);
-  addChoiceRow('', false);
-  addChoiceRow('', true);
-  addChoiceRow('', false);
-  document.getElementById('modal').classList.add('open');
-}
-
-function closeModal() { document.getElementById('modal').classList.remove('open'); }
-
-function updateTypeUI() {
-  const type = document.getElementById('q-type-select').value;
-  const qcmZone = document.getElementById('qcm-choices');
-  const correctZone = document.getElementById('correct-answer-zone');
-  const trouHint = document.getElementById('trou-hint');
-
-  qcmZone.style.display = type === 'qcm' ? '' : 'none';
-  correctZone.style.display = type !== 'qcm' ? '' : 'none';
-  trouHint.style.display = type === 'trou' ? '' : 'none';
-
-  if (type === 'vrai_faux') {
-    document.getElementById('correct-answer-input').placeholder = 'Vrai ou Faux';
-  } else {
-    document.getElementById('correct-answer-input').placeholder = 'Réponse exacte...';
-  }
-}
-
-function addChoiceRow(value = '', isCorrect = false) {
-  const editor = document.getElementById('choices-editor');
-  const row = document.createElement('div');
-  row.className = 'choice-row';
-  row.innerHTML = `
-    <div class="correct-dot ${isCorrect ? 'active' : ''}" onclick="setCorrect(this)"></div>
-    <input type="text" value="${value}" placeholder="Choix..." style="flex:1;">
-    <button class="btn btn-ghost btn-icon btn-sm" onclick="this.parentElement.remove()">✕</button>
-  `;
-  editor.appendChild(row);
-}
-
-function addChoice() { addChoiceRow('', false); }
-
-function setCorrect(dot) {
-  document.querySelectorAll('#choices-editor .correct-dot').forEach(d => d.classList.remove('active'));
-  dot.classList.add('active');
-}
-
-function saveQuestion() {
-  const type = document.getElementById('q-type-select').value;
-  const question = document.getElementById('q-question').value.trim();
-  const points = parseInt(document.getElementById('q-points').value) || 100;
-  if (!question) { alert('Écris une question !'); return; }
-
-  let q = { type, question, points };
-
-  if (type === 'qcm') {
-    const rows = document.querySelectorAll('#choices-editor .choice-row');
-    const choices = [], correctDot = document.querySelector('#choices-editor .correct-dot.active');
-    let correctAnswer = '';
-    rows.forEach((row, i) => {
-      const val = row.querySelector('input').value.trim();
-      if (val) choices.push(val);
-      if (row.querySelector('.correct-dot.active')) correctAnswer = val;
-    });
-    if (choices.length < 2) { alert('Ajoute au moins 2 choix !'); return; }
-    if (!correctAnswer) { alert('Indique la bonne réponse (point vert) !'); return; }
-    q.choices = choices;
-    q.correctAnswer = correctAnswer;
-  } else {
-    const correctAnswer = document.getElementById('correct-answer-input').value.trim();
-    if (!correctAnswer) { alert('Indique la bonne réponse !'); return; }
-    q.correctAnswer = correctAnswer;
-  }
-
-  if (editingIndex !== null) {
-    questions[editingIndex] = q;
-  } else {
-    questions.push(q);
-  }
-
-  closeModal();
-  renderQuestions();
-  saveQuestions();
-}
-
-// --- TOAST ---
-function showToast(msg) {
-  const t = document.createElement('div');
-  t.style.cssText = 'position:fixed;bottom:1.5rem;right:1.5rem;background:var(--green);color:white;padding:.75rem 1.2rem;border-radius:10px;font-weight:600;z-index:999;animation:fadeUp .3s ease;';
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2500);
-}
-
-document.getElementById('modal').addEventListener('click', e => { if (e.target === document.getElementById('modal')) closeModal(); });
-document.getElementById('pwd-input').addEventListener('keydown', e => { if (e.key === 'Enter') auth(); });
+// ── Game start ────────────────────────────────────────────────────────────────
+socket.on('game_start', () => {
+  showState('question');
+});
 </script>
+
 </body>
 </html>
-
